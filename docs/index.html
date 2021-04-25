@@ -142,6 +142,7 @@
         };
         
         var convolve = function (iw, ih, image, kw, kh, kernel, ow, oh, output) {
+          // TODO: use webgl to implement convolutions
           var limy = Math.min(ih-kh+1,oh);
           var limx = Math.min(iw-kw+1,ow);
 

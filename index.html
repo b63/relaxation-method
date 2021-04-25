@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, intial-scale=1.0">
+
+    <title>Relaxation Method</title>
+
+  <style>
+    * {
+      padding: 0;
+      margin: 0;
+    }
+
+    body {
+      padding: 0em;
+      margin: 4em auto;
+    }
+
+    html {
+      background-color: #222;
+    }
+
+    canvas {
+      background: #eee;
+      display: block;
+      border-radius: 10px;
+      margin: 0em 0em;
+    }
+
+    .heading {
+    }
+
+    .controls button {
+        background-color: rgb(24, 26, 27);
+        border: 2px solid rgb(55, 59, 62);
+        color: white;
+        padding: 16px 32px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 4px 2px;
+        transition-duration: 0.4s;
+        cursor: pointer;
+    }
+
+    .controls button:hover {
+      background-color: rgb(38, 41, 42);
+    }
+
+    .flex-container {
+      display: flex;
+      flex-wrap: wrap;
+      margin: 1em auto;
+    }
+    
+    .container {
+      margin: 1em auto;
+      width: 900px;
+    }
+
+    .fixed {
+      width: 720px;
+      margin: 1em 1em;
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .controls button {
+      flex-grow; 1;
+      margin: 1em 1em;
+    }
+
+    #heading {
+      margin: 1em auto;
+      padding: 1em;
+      text-align: left; 
+      color: #eee;
+    }
+  </style>
+
+  </head>
+
+  <body>
+    <div class="container">
+      <div id="heading">
+        <h1> Relaxation Method Demo </h1>
+        <h5> PHYS 406 </h5>
+      </div>
+      <div class="flex-container">
+        <div class="fixed">
+          <canvas id="maincanvas" width="720" height="480">
+          </canvas>
+        </div>
+
+        <div class="controls">
+          <button id="step-button">Step</button>
+          <button id="reset-button">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="text/javascript">
+        var canvas = document.getElementById("maincanvas");
+        var ctx = canvas.getContext("2d");
+
+        var mousex = 0, mousey = 0;
+        var STOP_UPDATE = false;
+        var mousesize = 10;
+
+        var width = 720;
+        var height =480;
+        ctx.width = width;
+        ctx.height = height;
+
+        var padding = 1;
+        var kernel = new Float32Array([0, 0.25, 0,
+                                      0.25, 0, 0.25,
+                                      0, 0.25, 0]);
+
+        var IMGW = width+2*padding, IMGH = height+2*padding;
+        var values = new Float32Array(IMGW*IMGH);
+
+        var toUint32 = function(w, h, padx, pady, imgw, imgh, arr) {
+          var uintarr = new Uint8ClampedArray(w*h*4);
+          for (var y = 0; y < h; y++) {
+            for (var x = 0; x < w; x++) {
+              var value = 256 * arr[(y+pady)*IMGW+x+padx];
+              var idx = (y*w + x)*4;
+              uintarr[idx]   = value;
+              uintarr[idx+1] = value;
+              uintarr[idx+2] = value;
+              uintarr[idx+3] = 255; // alpha
+            }
+          }
+
+          return uintarr;
+        };
+        
+        var convolve = function (iw, ih, image, kw, kh, kernel, ow, oh, output) {
+          var limy = Math.min(ih-kh+1,oh);
+          var limx = Math.min(iw-kw+1,ow);
+
+          var pady = Math.max(0, (oh - (ih-kh+1))>> 1);
+          var padx = Math.max(0, (ow - (iw-kw+1))>> 1)
+
+          for (var y = 0; y < limy; y++) {
+            for (var x = 0; x < limx; x++) {
+
+              var value = 0;
+              for (var ky = 0; ky < kh; ky++) {
+                for (var kx = 0; kx < kw; kx++){
+                  value += kernel[ky*kw+kx] * image[(ky+y)*iw+x+kx];
+                }
+              }
+              output[(y+pady)*ow + x + padx] = value;
+
+            }
+          }
+
+          return output;
+        };
+
+
+        var draw = function() {
+          if (STOP_UPDATE) {
+            return;
+          }
+
+          var idata = ctx.createImageData(width, height);
+          var v32 = toUint32(width, height, padding, padding, IMGW, IMGH, values);
+          idata.data.set(v32);
+
+          ctx.putImageData(idata, 0, 0);
+
+          window.requestAnimationFrame(draw);
+        };
+
+        var step = function() {
+          var output = new Float32Array(IMGW*IMGH);
+          values = convolve(IMGW, IMGH, values, 3, 3, kernel, IMGW, IMGH, output);
+        };
+
+
+        document.getElementById("step-button").addEventListener("click", step);
+        canvas.addEventListener('mousedown', e => {
+          mousex = e.offsetX + padding;
+          mousey = e.offsetY + padding;
+
+          var starty = Math.max(0, mousey-mousesize),
+            endy = Math.min(IMGH, mousey+mousesize+1);
+
+          var startx = Math.max(0, mousex-mousesize),
+            endx = Math.min(IMGW, mousex+mousesize+1);
+
+          for (var y = starty; y < endy; y++) {
+            for (var x = startx; x < endx; x++) {
+
+                values[y*IMGW + x] = 1;
+            }
+          }
+        });
+
+        document.getElementById("reset-button").addEventListener("click", e => {
+          values = new Float32Array(IMGW*IMGH);
+        });
+
+        window.requestAnimationFrame(draw);
+    </script>
+  </body>
+</html>

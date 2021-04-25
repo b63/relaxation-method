@@ -100,6 +100,7 @@
         <div class="controls">
           <button id="step-button">Step</button>
           <button id="reset-button">Reset</button>
+          <button id="play-pause-button">Play</button>
         </div>
       </div>
     </div>
@@ -109,8 +110,10 @@
         var ctx = canvas.getContext("2d");
 
         var mousex = 0, mousey = 0;
-        var STOP_UPDATE = false;
         var mousesize = 10;
+
+        var PAUSED = true;
+        var intervalId = undefined;
 
         var width = 720;
         var height =480;
@@ -168,10 +171,6 @@
 
 
         var draw = function() {
-          if (STOP_UPDATE) {
-            return;
-          }
-
           var idata = ctx.createImageData(width, height);
           var v32 = toUint32(width, height, padding, padding, IMGW, IMGH, values);
           idata.data.set(v32);
@@ -208,6 +207,17 @@
 
         document.getElementById("reset-button").addEventListener("click", e => {
           values = new Float32Array(IMGW*IMGH);
+        });
+
+        document.getElementById("play-pause-button").addEventListener("click", e => {
+          if (PAUSED = !PAUSED) {
+            e.target.innerHTML = "Pause";
+            intervalId = window.setInterval(step, 200);
+          } else {
+            intervalId == undefined || window.clearInterval(intervalId);
+            e.target.innerHTML = "Play";
+          }
+          
         });
 
         window.requestAnimationFrame(draw);
